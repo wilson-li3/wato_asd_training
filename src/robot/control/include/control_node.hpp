@@ -20,11 +20,13 @@ class ControlNode : public rclcpp::Node {
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_pub_;
     rclcpp::TimerBase::SharedPtr control_timer_;
+    rclcpp::TimerBase::SharedPtr position_timer_;
     
     // Callbacks
     void pathCallback(const nav_msgs::msg::Path::SharedPtr msg);
     void odomCallback(const nav_msgs::msg::Odometry::SharedPtr msg);
     void controlLoop();
+    void printPosition();
     
     // Data storage
     nav_msgs::msg::Path current_path_;

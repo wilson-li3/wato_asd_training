@@ -19,6 +19,10 @@ ControlNode::ControlNode()
   control_timer_ = this->create_wall_timer(
     std::chrono::milliseconds(100), std::bind(&ControlNode::controlLoop, this));
   
+  // Timer to print robot position every 2 seconds
+  position_timer_ = this->create_wall_timer(
+    std::chrono::seconds(2), std::bind(&ControlNode::printPosition, this));
+  
   RCLCPP_INFO(this->get_logger(), "Control node initialized");
 }
 
@@ -42,6 +46,17 @@ void ControlNode::controlLoop() {
   
   // Publish the velocity command
   cmd_vel_pub_->publish(cmd_vel);
+}
+
+void ControlNode::printPosition() {
+  if (odom_received_) {
+    double x = robot_odom_.pose.pose.position.x;
+    double y = robot_odom_.pose.pose.position.y;
+    double z = robot_odom_.pose.pose.position.z;
+    RCLCPP_INFO(this->get_logger(), "Robot Position: x=%.3f, y=%.3f, z=%.3f", x, y, z);
+  } else {
+    RCLCPP_WARN(this->get_logger(), "Robot position unknown (no odometry received)");
+  }
 }
 
 int main(int argc, char ** argv)
