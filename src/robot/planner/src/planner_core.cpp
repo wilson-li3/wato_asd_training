@@ -127,8 +127,9 @@ bool PlannerCore::isValidCell(int mx, int my, const nav_msgs::msg::OccupancyGrid
     int idx = my * map.info.width + mx;
     int8_t cost = map.data[idx];
     
-    // Consider cells with cost > 50 as obstacles
-    return cost < 50;
+    // Consider cells with cost >= 30 as obstacles (more conservative than 50)
+    // This ensures robot stays further from walls
+    return cost < 30;
 }
 
 double PlannerCore::heuristic(const CellIndex& a, const CellIndex& b) const {

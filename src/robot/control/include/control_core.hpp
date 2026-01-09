@@ -27,7 +27,7 @@ class ControlCore {
     rclcpp::Logger logger_;
     
     // Parameters
-    double lookahead_distance_ = 1.0;  // meters
+    double lookahead_distance_ = 1.2;  // meters (increased from 1.0 for smoother navigation)
     double goal_tolerance_ = 0.1;      // meters
     double linear_speed_ = 0.5;        // m/s
     double max_angular_speed_ = 1.0;   // rad/s

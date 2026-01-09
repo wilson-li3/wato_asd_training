@@ -25,7 +25,7 @@ class CostmapCore {
     double resolution_ = 0.1;  // meters per cell
     int width_ = 200;          // cells
     int height_ = 200;         // cells
-    double inflation_radius_ = 1.0;  // meters
+    double inflation_radius_ = 1.5;  // meters (increased from 1.0 for better wall clearance)
     int max_cost_ = 100;
 
     // Helper functions
