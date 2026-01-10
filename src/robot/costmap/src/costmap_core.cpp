@@ -75,7 +75,7 @@ void CostmapCore::inflateObstacles(std::vector<int8_t>& costmap) {
     // Create a copy for reading
     std::vector<int8_t> costmap_copy = costmap;
     
-    int inflation_cells = static_cast<int>(inflation_radius_ / resolution_);
+    int inflation_cells = static_cast<int>(std::ceil(inflation_radius_ / resolution_));
     
     // For each cell in the costmap
     for (int y = 0; y < height_; ++y) {
@@ -95,8 +95,13 @@ void CostmapCore::inflateObstacles(std::vector<int8_t>& costmap) {
                             
                             if (dist <= inflation_radius_) {
                                 int nidx = ny * width_ + nx;
-                                // Calculate cost based on distance
-                                int cost = static_cast<int>(max_cost_ * (1.0 - dist / inflation_radius_));
+                                // Calculate cost based on distance with quadratic decay for faster falloff
+                                // Normalized distance: 0 at obstacle, 1 at inflation_radius
+                                double normalized_dist = dist / inflation_radius_;
+                                // Quadratic decay: (1 - normalized_dist)^cost_scaling_factor
+                                // This creates faster cost decay, making the visual footprint smaller
+                                double cost_factor = std::pow(1.0 - normalized_dist, cost_scaling_factor_);
+                                int cost = static_cast<int>(max_cost_ * cost_factor);
                                 // Only assign if higher than current value
                                 if (cost > costmap[nidx]) {
                                     costmap[nidx] = cost;
@@ -108,6 +113,14 @@ void CostmapCore::inflateObstacles(std::vector<int8_t>& costmap) {
             }
         }
     }
+}
+
+void CostmapCore::setInflationRadius(double radius) {
+    inflation_radius_ = radius;
+}
+
+void CostmapCore::setCostScalingFactor(double factor) {
+    cost_scaling_factor_ = factor;
 }
 
 double CostmapCore::distance(int x1, int y1, int x2, int y2) {

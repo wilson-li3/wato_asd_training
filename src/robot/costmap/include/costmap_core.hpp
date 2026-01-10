@@ -18,6 +18,10 @@ class CostmapCore {
     // Process LaserScan and generate OccupancyGrid
     nav_msgs::msg::OccupancyGrid processLaserScan(const sensor_msgs::msg::LaserScan::SharedPtr scan);
 
+    // Set parameters
+    void setInflationRadius(double radius);
+    void setCostScalingFactor(double factor);
+
   private:
     rclcpp::Logger logger_;
 
@@ -25,8 +29,9 @@ class CostmapCore {
     double resolution_ = 0.1;  // meters per cell
     int width_ = 200;          // cells
     int height_ = 200;         // cells
-    double inflation_radius_ = 1.5;  // meters (increased from 1.0 for better wall clearance)
+    double inflation_radius_ = 0.5;  // meters (robot_radius + safety_margin: 0.25 + 0.25)
     int max_cost_ = 100;
+    double cost_scaling_factor_ = 2.0;  // Quadratic decay: higher = faster falloff
 
     // Helper functions
     void initializeCostmap(std::vector<int8_t>& costmap);

@@ -1,3 +1,5 @@
-# costmap_node:
-#   ros__parameters:
+costmap_node:
+  ros__parameters:
+    inflation_radius: 0.5  # meters (robot_radius 0.25 + safety_margin 0.25)
+    cost_scaling_factor: 2.5  # Quadratic decay factor (higher = faster falloff, thinner visual footprint)
 

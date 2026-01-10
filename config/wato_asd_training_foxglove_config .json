@@ -118,7 +118,7 @@
         "/costmap": {
           "visible": true,
           "colorMode": "costmap",
-          "alpha": 1
+          "alpha": 0.6
         },
         "/path": {
           "visible": true,
