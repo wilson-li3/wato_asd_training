@@ -15,6 +15,7 @@ find_package(ament_cmake REQUIRED) # ROS2 build tool
 find_package(rclcpp REQUIRED)      # ROS2 C++ package
 find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 
 # Compiles source files into a library
@@ -34,6 +35,7 @@ ament_target_dependencies(control_lib
   rclcpp
   nav_msgs
   geometry_msgs
+  sensor_msgs
   tf2
 )
 
@@ -46,6 +48,7 @@ ament_target_dependencies(control_node
   rclcpp
   nav_msgs
   geometry_msgs
+  sensor_msgs
 )
 
 # Copy executable to installation location

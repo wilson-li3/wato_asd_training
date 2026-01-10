@@ -3,9 +3,28 @@
 #include <cmath>
 
 PlannerNode::PlannerNode() 
-  : Node("planner"), 
+  : Node("planner_node"), 
     planner_(robot::PlannerCore(this->get_logger())),
     state_(State::WAITING_FOR_GOAL) {
+  
+  // Declare and get parameters
+  this->declare_parameter<double>("robot_radius", 0.25);
+  this->declare_parameter<double>("safety_margin", 0.25);
+  this->declare_parameter<double>("execution_buffer", 0.15);
+  this->declare_parameter<int>("obstacle_cost_threshold", 20);
+  
+  double robot_radius = this->get_parameter("robot_radius").as_double();
+  double safety_margin = this->get_parameter("safety_margin").as_double();
+  double execution_buffer = this->get_parameter("execution_buffer").as_double();
+  int obstacle_threshold = this->get_parameter("obstacle_cost_threshold").as_int();
+  
+  // Calculate minimum clearance: robot_radius + safety_margin + execution_buffer
+  double minimum_clearance = robot_radius + safety_margin + execution_buffer;
+  
+  // Set planner parameters
+  planner_.setMinimumClearance(minimum_clearance);
+  planner_.setExecutionBuffer(execution_buffer);
+  planner_.setObstacleCostThreshold(static_cast<int8_t>(obstacle_threshold));
   
   // Subscribers
   map_sub_ = this->create_subscription<nav_msgs::msg::OccupancyGrid>(
@@ -24,7 +43,8 @@ PlannerNode::PlannerNode()
   timer_ = this->create_wall_timer(
     std::chrono::milliseconds(500), std::bind(&PlannerNode::timerCallback, this));
   
-  RCLCPP_INFO(this->get_logger(), "Planner node initialized");
+  RCLCPP_INFO(this->get_logger(), "Planner node initialized: minimum_clearance=%.2f m (robot=%.2f + safety=%.2f + exec_buffer=%.2f), obstacle_threshold=%d",
+              minimum_clearance, robot_radius, safety_margin, execution_buffer, obstacle_threshold);
 }
 
 void PlannerNode::mapCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {

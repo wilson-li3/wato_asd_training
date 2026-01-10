@@ -1,3 +1,8 @@
-# control_node:
-#   ros__parameters:
+control_node:
+  ros__parameters:
+    robot_radius: 0.25              # meters, robot footprint radius
+    safety_margin: 0.25              # meters, safety padding for execution
+    execution_buffer: 0.15            # meters, additional buffer to prevent edge skimming
+    low_clearance_slowdown_factor: 0.5  # Factor to reduce speed when clearance is low (0.0-1.0)
+    low_clearance_threshold: 0.8      # meters, distance below which to start slowing down
     

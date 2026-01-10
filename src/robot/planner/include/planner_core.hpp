@@ -63,16 +63,28 @@ class PlannerCore {
         const geometry_msgs::msg::Point& start,
         const geometry_msgs::msg::Point& goal);
 
+    // Set parameters
+    void setMinimumClearance(double clearance);
+    void setExecutionBuffer(double buffer);
+    void setObstacleCostThreshold(int8_t threshold);
+
   private:
     rclcpp::Logger logger_;
+
+    // Parameters
+    double minimum_clearance_ = 0.6;  // meters (robot_radius + safety_margin + execution_buffer)
+    double execution_buffer_ = 0.15;  // meters (additional buffer for execution safety)
+    int8_t obstacle_cost_threshold_ = 20;  // Cost threshold (lower = more conservative, stays further from obstacles)
 
     // Helper functions
     void worldToMap(double wx, double wy, const nav_msgs::msg::OccupancyGrid& map, int& mx, int& my) const;
     void mapToWorld(int mx, int my, const nav_msgs::msg::OccupancyGrid& map, double& wx, double& wy) const;
     bool isValidCell(int mx, int my, const nav_msgs::msg::OccupancyGrid& map) const;
+    bool hasMinimumClearance(int mx, int my, const nav_msgs::msg::OccupancyGrid& map) const;
     double heuristic(const CellIndex& a, const CellIndex& b) const;
     std::vector<CellIndex> getNeighbors(const CellIndex& cell) const;
     double getCost(int mx, int my, const nav_msgs::msg::OccupancyGrid& map) const;
+    bool validatePathClearance(const nav_msgs::msg::Path& path, const nav_msgs::msg::OccupancyGrid& map) const;
 };
 
 }  

@@ -2,8 +2,30 @@
 #include <chrono>
 
 ControlNode::ControlNode() 
-  : Node("control"), 
+  : Node("control_node"), 
     control_(robot::ControlCore(this->get_logger())) {
+  
+  // Declare and get parameters
+  this->declare_parameter<double>("robot_radius", 0.25);
+  this->declare_parameter<double>("safety_margin", 0.25);
+  this->declare_parameter<double>("execution_buffer", 0.15);
+  this->declare_parameter<double>("low_clearance_slowdown_factor", 0.5);
+  this->declare_parameter<double>("low_clearance_threshold", 0.8);
+  
+  double robot_radius = this->get_parameter("robot_radius").as_double();
+  double safety_margin = this->get_parameter("safety_margin").as_double();
+  double execution_buffer = this->get_parameter("execution_buffer").as_double();
+  double slowdown_factor = this->get_parameter("low_clearance_slowdown_factor").as_double();
+  double low_clearance_threshold = this->get_parameter("low_clearance_threshold").as_double();
+  
+  // Calculate minimum clearance: robot_radius + safety_margin + execution_buffer
+  double minimum_clearance = robot_radius + safety_margin + execution_buffer;
+  
+  // Set control parameters
+  control_.setMinimumClearance(minimum_clearance);
+  control_.setExecutionBuffer(execution_buffer);
+  control_.setLowClearanceSlowdownFactor(slowdown_factor);
+  control_.setLowClearanceThreshold(low_clearance_threshold);
   
   // Subscribers
   path_sub_ = this->create_subscription<nav_msgs::msg::Path>(
@@ -11,6 +33,9 @@ ControlNode::ControlNode()
   
   odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
     "/odom/filtered", 10, std::bind(&ControlNode::odomCallback, this, std::placeholders::_1));
+  
+  lidar_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
+    "/lidar", 10, std::bind(&ControlNode::lidarCallback, this, std::placeholders::_1));
   
   // Publisher
   cmd_vel_pub_ = this->create_publisher<geometry_msgs::msg::Twist>("/cmd_vel", 10);
@@ -23,7 +48,8 @@ ControlNode::ControlNode()
   position_timer_ = this->create_wall_timer(
     std::chrono::seconds(2), std::bind(&ControlNode::printPosition, this));
   
-  RCLCPP_INFO(this->get_logger(), "Control node initialized");
+  RCLCPP_INFO(this->get_logger(), "Control node initialized: minimum_clearance=%.2f m (robot=%.2f + safety=%.2f + exec_buffer=%.2f)",
+              minimum_clearance, robot_radius, safety_margin, execution_buffer);
 }
 
 void ControlNode::pathCallback(const nav_msgs::msg::Path::SharedPtr msg) {
@@ -36,13 +62,19 @@ void ControlNode::odomCallback(const nav_msgs::msg::Odometry::SharedPtr msg) {
   odom_received_ = true;
 }
 
+void ControlNode::lidarCallback(const sensor_msgs::msg::LaserScan::SharedPtr msg) {
+  latest_lidar_ = *msg;
+  lidar_received_ = true;
+}
+
 void ControlNode::controlLoop() {
   if (!path_received_ || !odom_received_) {
     return;
   }
   
-  // Compute velocity command using Pure Pursuit
-  auto cmd_vel = control_.computeVelocity(current_path_, robot_odom_);
+  // Compute velocity command using Pure Pursuit with clearance checking
+  const sensor_msgs::msg::LaserScan* lidar_ptr = lidar_received_ ? &latest_lidar_ : nullptr;
+  auto cmd_vel = control_.computeVelocity(current_path_, robot_odom_, lidar_ptr);
   
   // Publish the velocity command
   cmd_vel_pub_->publish(cmd_vel);

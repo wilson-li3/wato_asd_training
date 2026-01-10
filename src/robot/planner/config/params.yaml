@@ -1,3 +1,7 @@
-# planner_node:
-#   ros__parameters:
+planner_node:
+  ros__parameters:
+    robot_radius: 0.25      # meters, robot footprint radius
+    safety_margin: 0.25      # meters, safety padding for planning
+    execution_buffer: 0.15   # meters, additional buffer for execution safety (prevents edge skimming)
+    obstacle_cost_threshold: 20  # Cost value threshold (0-100, lower = more conservative)
     

@@ -57,11 +57,12 @@ nav_msgs::msg::Path PlannerCore::planPath(
         std::vector<CellIndex> neighbors = getNeighbors(current_idx);
         
         for (const auto& neighbor : neighbors) {
+            // Check both validity and minimum clearance
             if (!isValidCell(neighbor.x, neighbor.y, map)) {
                 continue;
             }
             
-            // Calculate tentative g_score
+            // Calculate tentative g_score with cost penalty for proximity to obstacles
             double tentative_g = g_score[current_idx] + getCost(neighbor.x, neighbor.y, map);
             
             // If this path to neighbor is better
@@ -100,7 +101,15 @@ nav_msgs::msg::Path PlannerCore::planPath(
             path.poses.push_back(pose_stamped);
         }
         
-        RCLCPP_INFO(logger_, "Path found with %zu waypoints", path.poses.size());
+        // Validate path clearance - ensure all waypoints maintain minimum clearance
+        if (!validatePathClearance(path, map)) {
+            RCLCPP_WARN(logger_, "Path found but does not meet minimum clearance requirement, rejecting");
+            path.poses.clear();  // Return empty path
+            return path;
+        }
+        
+        RCLCPP_INFO(logger_, "Path found with %zu waypoints (minimum_clearance=%.2f m)", 
+                    path.poses.size(), minimum_clearance_);
     } else {
         RCLCPP_WARN(logger_, "No path found from start to goal");
     }
@@ -124,12 +133,50 @@ bool PlannerCore::isValidCell(int mx, int my, const nav_msgs::msg::OccupancyGrid
         return false;
     }
     
+    // Use stricter threshold for planning - ensures path stays away from obstacles
+    return hasMinimumClearance(mx, my, map);
+}
+
+bool PlannerCore::hasMinimumClearance(int mx, int my, const nav_msgs::msg::OccupancyGrid& map) const {
+    if (mx < 0 || mx >= static_cast<int>(map.info.width) ||
+        my < 0 || my >= static_cast<int>(map.info.height)) {
+        return false;
+    }
+    
+    // Check if this cell itself is an obstacle
     int idx = my * map.info.width + mx;
     int8_t cost = map.data[idx];
+    if (cost >= obstacle_cost_threshold_) {
+        return false;  // Cell is obstacle or too close to obstacle
+    }
     
-    // Consider cells with cost >= 30 as obstacles (more conservative than 50)
-    // This ensures robot stays further from walls
-    return cost < 30;
+    // Check clearance in a radius around this cell
+    // Convert minimum_clearance to grid cells
+    int clearance_cells = static_cast<int>(std::ceil(minimum_clearance_ / map.info.resolution));
+    
+    // Check all cells within clearance radius
+    for (int dy = -clearance_cells; dy <= clearance_cells; ++dy) {
+        for (int dx = -clearance_cells; dx <= clearance_cells; ++dx) {
+            double dist = std::sqrt(dx * dx + dy * dy) * map.info.resolution;
+            if (dist <= minimum_clearance_) {
+                int nx = mx + dx;
+                int ny = my + dy;
+                
+                if (nx >= 0 && nx < static_cast<int>(map.info.width) &&
+                    ny >= 0 && ny < static_cast<int>(map.info.height)) {
+                    int nidx = ny * map.info.width + nx;
+                    int8_t neighbor_cost = map.data[nidx];
+                    
+                    // If any cell within clearance radius is an obstacle, this cell is invalid
+                    if (neighbor_cost >= obstacle_cost_threshold_) {
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+    
+    return true;
 }
 
 double PlannerCore::heuristic(const CellIndex& a, const CellIndex& b) const {
@@ -160,8 +207,44 @@ double PlannerCore::getCost(int mx, int my, const nav_msgs::msg::OccupancyGrid& 
     int idx = my * map.info.width + mx;
     int8_t cost = map.data[idx];
     
-    // Convert cost to distance (0-100 -> 0.0-1.0)
-    return 1.0 + (cost / 100.0);
+    // Convert cost to distance (0-100 -> 1.0-2.0)
+    // Add penalty for cells closer to obstacles to prefer paths with more clearance
+    double base_cost = 1.0 + (cost / 100.0);
+    
+    // Additional penalty for cells that are close to obstacles (even if not obstacles themselves)
+    // This encourages the planner to find paths with better clearance
+    if (cost > 0) {
+        double penalty = (cost / 100.0) * 2.0;  // Extra penalty for proximity to obstacles
+        base_cost += penalty;
+    }
+    
+    return base_cost;
+}
+
+bool PlannerCore::validatePathClearance(const nav_msgs::msg::Path& path, 
+                                       const nav_msgs::msg::OccupancyGrid& map) const {
+    // Check each waypoint in the path to ensure it maintains minimum clearance
+    for (const auto& pose_stamped : path.poses) {
+        int mx, my;
+        worldToMap(pose_stamped.pose.position.x, pose_stamped.pose.position.y, map, mx, my);
+        
+        if (!hasMinimumClearance(mx, my, map)) {
+            return false;  // Path waypoint violates minimum clearance
+        }
+    }
+    return true;
+}
+
+void PlannerCore::setMinimumClearance(double clearance) {
+    minimum_clearance_ = clearance;
+}
+
+void PlannerCore::setExecutionBuffer(double buffer) {
+    execution_buffer_ = buffer;
+}
+
+void PlannerCore::setObstacleCostThreshold(int8_t threshold) {
+    obstacle_cost_threshold_ = threshold;
 }
 
 } 
