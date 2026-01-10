@@ -29,7 +29,7 @@ class ControlCore {
     // Parameters
     double lookahead_distance_ = 1.2;  // meters (increased from 1.0 for smoother navigation)
     double goal_tolerance_ = 0.1;      // meters
-    double linear_speed_ = 0.5;        // m/s
+    double linear_speed_ = 0.8;        // m/s (increased from 0.5 for faster movement)
     double max_angular_speed_ = 1.0;   // rad/s
     
     // Helper functions

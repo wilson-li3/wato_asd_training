@@ -1,0 +1,17 @@
+safety_filter:
+  ros__parameters:
+    robot_radius: 0.25        # meters, robot footprint radius (must match planner/costmap)
+    safety_margin: 0.15       # meters, extra safety padding (must match planner/costmap)
+    min_front: 0.0            # meters, 0 = auto-compute as (robot_radius + safety_margin) * 1.5
+    min_side: 0.0             # meters, 0 = auto-compute as (robot_radius + safety_margin)
+    min_back: 0.0             # meters, 0 = auto-compute as (robot_radius + safety_margin) * 0.8
+    hard_stop_distance: 0.35  # meters, hard stop distance for any obstacle
+    max_linear: 0.5           # m/s, maximum linear velocity
+    max_angular: 1.0          # rad/s, maximum angular velocity
+    
+    # Recovery parameters
+    backup_duration: 3.0      # seconds, how long to back up during recovery
+    backup_speed: -0.3        # m/s, backward speed during recovery (negative)
+    rotation_speed: 0.6       # rad/s, rotation speed to find clear path
+    stuck_timeout: 5.0        # seconds, time without movement before considering stuck
+    recovery_timeout: 10.0    # seconds, timeout before retrying recovery
